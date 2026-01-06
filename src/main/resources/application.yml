@@ -17,7 +17,7 @@ spring:
           max-wait: -1ms
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8000}
   shutdown: graceful
 
 # JWT Configuration (RS256 with kid) - P0 FIX: Changed from 8 hours to 1 hour
@@ -38,6 +38,10 @@ google:
     scopes:
       - https://www.googleapis.com/auth/admin.directory.group.readonly
       - https://www.googleapis.com/auth/admin.directory.user.readonly
+    # OAuth 2.0 Client Configuration (loaded from secrets/oauth-client.json or environment variables)
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:}
     cache:
       enabled: true
       ttl-minutes: 5

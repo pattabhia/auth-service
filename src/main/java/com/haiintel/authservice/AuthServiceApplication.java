@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * HAI-Indexer Authentication Service
- * 
+ *
  * Enterprise-grade authentication and authorization service with:
  * - Google Workspace integration (OAuth 2.0 client)
  * - JWT token issuance (RS256 with JWKS)
@@ -16,9 +16,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * - Audit logging (SOC 2 compliant)
  * - Circuit breaker (Resilience4j)
  * - Rate limiting (Istio-based)
- * 
+ *
  * @version 2.1.1
- * @author HAI-Intel Team
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
@@ -30,4 +29,3 @@ public class AuthServiceApplication {
         SpringApplication.run(AuthServiceApplication.class, args);
     }
 }
-

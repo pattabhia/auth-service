@@ -26,34 +26,40 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers(
-                                "/auth/google/login",
-                                "/.well-known/jwks.json",
-                                "/actuator/health/**",
-                                "/actuator/prometheus",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/dev/test/**" // Dev test endpoints (only enabled with DEV_TEST_ENDPOINTS_ENABLED=true)
-                        ).permitAll()
-                        // Admin endpoints
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated())
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .cors(AbstractHttpConfigurer::disable)
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                // Public endpoints
+                                                .requestMatchers(
+                                                                "/api/v1/auth/login/google", // OAuth initiate
+                                                                "/api/v1/auth/callback/google", // OAuth callback
+                                                                "/api/v1/auth/google/login", // OAuth login
+                                                                "/.well-known/jwks.json",
+                                                                "/actuator/health/**",
+                                                                "/actuator/prometheus",
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/v3/api-docs/**",
+                                                                "/api/v1/dev/test/**" // Dev test endpoints (only
+                                                                                      // enabled with
+                                                                                      // DEV_TEST_ENDPOINTS_ENABLED=true)
+                                                ).permitAll()
+                                                // Admin endpoints
+                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                                // All other endpoints require authentication
+                                                .anyRequest().authenticated())
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 }

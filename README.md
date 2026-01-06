@@ -1,19 +1,6 @@
 # HAI-Indexer Authentication Service
 
-**Version:** 2.1.1
-**Status:** ✅ Build Successful | Ready for Deployment
-**Last Updated:** 2026-01-06
-
 > **Important:** This project requires **Java 21** (not Java 24) for successful compilation due to Lombok compatibility.
-
-## 📋 Quick Links
-
-- [Build Success Summary](BUILD_SUCCESS_SUMMARY.md) - Build details and next steps
-- [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md) - All 8 architecture diagrams (Mermaid)
-- [Visual Diagrams](docs/diagrams/) - UML, Flow, and Sequence diagrams (PNG)
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) - Complete deployment instructions
-- [Design Review](docs/DESIGN_REVIEW_V2.1.1.md) - Design decisions and rationale
-- [Build Troubleshooting](BUILD_ISSUES_AND_RESOLUTION.md) - Common issues and solutions
 
 ## 📐 Architecture Overview
 
@@ -118,11 +105,65 @@ chmod +x scripts/generate-jwt-keys.sh
 
 ### 2. Configure Google Workspace
 
+#### A. Service Account (for Admin SDK API)
+
 1. Create a service account in Google Cloud Console
 2. Enable Admin SDK API
 3. Download service account JSON
 4. Save to `secrets/service-account.json`
 5. Configure domain-wide delegation
+
+**Example `service-account.json`:**
+
+```json
+{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  "client_email": "your-service-account@your-project.iam.gserviceaccount.com",
+  "client_id": "...",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+}
+```
+
+#### B. OAuth 2.0 Client (for User Authentication)
+
+1. Go to Google Cloud Console → APIs & Services → Credentials
+2. Create OAuth 2.0 Client ID (Web application)
+3. Add authorized redirect URIs:
+   - `http://localhost:8000/api/auth/callback/google` (for local dev)
+   - `https://your-domain.com/api/auth/callback/google` (for production)
+4. Download the OAuth client JSON
+5. Save to `secrets/oauth-client.json`
+
+**Template `oauth-client.json`:**
+
+```json
+{
+  "web": {
+    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+    "project_id": "your-project-id",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uris": ["http://localhost:8000/api/auth/callback/google"],
+    "javascript_origins": ["http://localhost:8000"]
+  }
+}
+```
+
+**Note:** A template is available at `secrets/oauth-client.json.template`
+
+**Required Files for Local Development:**
+
+- ✅ `secrets/jwt-private.pem` (generated via script)
+- ✅ `secrets/jwt-public.pem` (generated via script)
+- ✅ `secrets/service-account.json` (from Google Cloud Console)
+- ✅ `secrets/oauth-client.json` (from Google Cloud Console)
 
 ### 3. Run Locally with Docker Compose
 
@@ -141,22 +182,59 @@ docker-compose logs -f auth-service
 
 ### 4. Test the Service
 
+#### Option 1: OAuth Flow (Browser-based)
+
+```bash
+# 1. Open in browser to initiate OAuth flow
+open http://localhost:8000/api/auth/login/google
+
+# 2. Log in with your Google Workspace account
+# 3. Grant permissions
+# 4. You'll be redirected back with a JWT token in the response
+```
+
+#### Option 2: Dev Test Endpoints (Quick Testing)
+
+```bash
+# Dev test login (bypasses OAuth, only for local development)
+curl -X POST 'http://localhost:8000/dev/test/login/pattabhi@haiintel.com?group=admin@haiintel.com'
+
+# Response:
+# {
+#   "accessToken": "eyJraWQiOiI...",
+#   "tokenType": "Bearer",
+#   "expiresIn": 3600
+# }
+```
+
+#### Option 3: API Endpoints
+
 ```bash
 # Health check
-curl http://localhost:8080/actuator/health
+curl http://localhost:8000/actuator/health
 
 # JWKS endpoint
-curl http://localhost:8080/.well-known/jwks.json
+curl http://localhost:8000/.well-known/jwks.json
 
-# Login (requires Google OAuth code)
-curl -X POST http://localhost:8080/auth/google/login \
+# Legacy login (requires Google OAuth code)
+curl -X POST http://localhost:8000/auth/google/login \
   -H "Content-Type: application/json" \
   -d '{"authorizationCode": "YOUR_OAUTH_CODE"}'
 
 # Get user info (requires JWT token)
-curl http://localhost:8080/auth/me \
+curl http://localhost:8000/api/auth/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
+
+#### Swagger UI
+
+Access the interactive API documentation:
+
+```bash
+open http://localhost:8000/swagger-ui/index.html
+```
+
+**Note:** Click the "Authorize" button in Swagger UI to authenticate with Google OAuth!
 
 ## 📦 Deployment
 
@@ -226,22 +304,6 @@ authorization:
 - Rate limiting: Istio-based (P1 fix)
 - Circuit breaker: Resilience4j (P1 fix)
 
-## 📚 Documentation
-
-### Architecture & Design
-
-- [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md) - Mermaid diagrams with detailed descriptions
-- [Visual Diagrams](docs/diagrams/) - UML, authentication flow, and sequence diagrams
-- [Design Review](docs/DESIGN_REVIEW_V2.1.1.md) - Comprehensive design review
-- [Review Summary](docs/REVIEW_SUMMARY.md) - Quick reference guide
-
-### Implementation & Deployment
-
-- [Implementation Checklist](docs/IMPLEMENTATION_CHECKLIST.md) - Progress tracking
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) - Step-by-step deployment
-- [Build Success Summary](BUILD_SUCCESS_SUMMARY.md) - Build verification
-- [Build Troubleshooting](BUILD_ISSUES_AND_RESOLUTION.md) - Common issues
-
 ## 🧪 Testing
 
 ```bash
@@ -254,7 +316,3 @@ mvn verify
 # Run with coverage
 mvn clean verify jacoco:report
 ```
-
-## 📝 License
-
-Copyright © 2026 HAI-Intel. All rights reserved.
