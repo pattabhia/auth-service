@@ -4,7 +4,7 @@
 
 ## 📐 Architecture Overview
 
-### System Architecture
+### UML
 
 ![UML Architecture Diagram](docs/diagrams/uml.png)
 
