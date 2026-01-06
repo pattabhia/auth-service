@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Redis for token revocation
+  redis:
+    image: redis:7-alpine
+    container_name: auth-service-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devpassword}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - auth-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: dev
+      
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
+      
+      # JWT Configuration
+      JWT_PRIVATE_KEY_FILE: /secrets/jwt-private.pem
+      JWT_PUBLIC_KEY_FILE: /secrets/jwt-public.pem
+      
+      # Google Workspace Configuration
+      GOOGLE_SERVICE_ACCOUNT_FILE: /secrets/service-account.json
+      GOOGLE_DELEGATED_ADMIN: ${GOOGLE_DELEGATED_ADMIN:-admin@haiintel.com}
+      GOOGLE_WORKSPACE_DOMAIN: ${GOOGLE_WORKSPACE_DOMAIN:-haiintel.com}
+      
+      # Feature Toggles
+      TOKEN_REVOCATION_ENABLED: true
+      AUDIT_ENABLED: true
+      RATE_LIMITING_ENABLED: true
+      
+      # Environment
+      ENVIRONMENT: local
+    volumes:
+      - ./secrets:/secrets:ro
+      - ./logs:/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/liveness"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - auth-network
+
+volumes:
+  redis-data:
+
+networks:
+  auth-network:
+    driver: bridge
+

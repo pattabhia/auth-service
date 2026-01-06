@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: hai-indexer
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: auth-service
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auth-service
+  namespace: hai-indexer
+

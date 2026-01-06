@@ -1,0 +1,39 @@
+# Compiled class files
+*.class
+target/
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Secrets (NEVER commit!)
+secrets/
+*.pem
+*.key
+*.p12
+*.jks
+service-account.json
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+
+# Test coverage
+coverage/
+*.exec
+

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: hai-indexer
+data:
+  google.delegated.admin: "admin@haiintel.com"
+  google.workspace.domain: "haiintel.com"
+  jwt.issuer: "hai-intel-auth-service"
+  jwt.audience: "hai-indexer"
+

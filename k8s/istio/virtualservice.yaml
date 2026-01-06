@@ -1,0 +1,31 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: auth-service
+  namespace: hai-indexer
+spec:
+  hosts:
+  - auth-service
+  - auth.haiintel.com
+  gateways:
+  - hai-indexer-gateway
+  - mesh
+  http:
+  - match:
+    - uri:
+        prefix: /auth
+    - uri:
+        prefix: /.well-known
+    - uri:
+        prefix: /admin
+    route:
+    - destination:
+        host: auth-service
+        port:
+          number: 8080
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+

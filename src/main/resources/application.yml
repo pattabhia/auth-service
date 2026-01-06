@@ -1,0 +1,149 @@
+spring:
+  application:
+    name: auth-service
+  
+  # Redis Configuration (for token revocation)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+server:
+  port: 8080
+  shutdown: graceful
+
+# JWT Configuration (RS256 with kid) - P0 FIX: Changed from 8 hours to 1 hour
+jwt:
+  algorithm: RS256
+  private-key-file: ${JWT_PRIVATE_KEY_FILE:/secrets/jwt-private.pem}
+  public-key-file: ${JWT_PUBLIC_KEY_FILE:/secrets/jwt-public.pem}
+  issuer: hai-intel-auth-service
+  audience: hai-indexer
+  expiration-hours: 1  # ✅ P0 FIX: Changed from 8 to 1 hour
+
+# Google Workspace Configuration
+google:
+  workspace:
+    service-account-file: ${GOOGLE_SERVICE_ACCOUNT_FILE:/secrets/service-account.json}
+    delegated-admin: ${GOOGLE_DELEGATED_ADMIN:admin@haiintel.com}
+    domain: ${GOOGLE_WORKSPACE_DOMAIN:haiintel.com}
+    scopes:
+      - https://www.googleapis.com/auth/admin.directory.group.readonly
+      - https://www.googleapis.com/auth/admin.directory.user.readonly
+    cache:
+      enabled: true
+      ttl-minutes: 5
+      max-size: 1000
+
+# Resilience4j Circuit Breaker - P1 FIX: Using Resilience4j instead of manual implementation
+resilience4j:
+  circuitbreaker:
+    instances:
+      googleWorkspace:
+        failure-rate-threshold: 50  # ✅ P1 FIX: 50% failure rate (was 3 consecutive failures)
+        minimum-number-of-calls: 10  # Need 10 calls before calculating rate
+        wait-duration-in-open-state: 60s  # ✅ P1 FIX: 60 seconds (was 30)
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - java.io.IOException
+          - com.google.api.client.googleapis.json.GoogleJsonResponseException
+  
+  # Metrics
+  metrics:
+    enabled: true
+    legacy:
+      enabled: false
+
+# Authorization Configuration - P2 FIX: Configuration-based role mapping
+authorization:
+  role-mappings:
+    - group: "admin@haiintel.com"
+      role: ADMIN
+      priority: 1
+    - group: "employees@haiintel.com"
+      role: EMPLOYEE
+      priority: 2
+    - group: "intern@haiintel.com"
+      role: INTERN
+      priority: 3
+  default-role: INTERN
+
+# Identity Provider Configuration - P2 FIX: Hexagonal architecture support
+idp:
+  provider: ${IDP_PROVIDER:google}  # Options: google, azure, okta
+  enabled-providers:
+    - google
+
+# Token Revocation Configuration - P0 FIX
+token-revocation:
+  enabled: ${TOKEN_REVOCATION_ENABLED:true}
+  redis-key-prefix: "revoked:"
+
+# Audit Logging Configuration - P0 FIX
+audit:
+  enabled: ${AUDIT_ENABLED:true}
+  log-to-file: true
+  log-to-stdout: true
+  retention-days: 90
+
+# Rate Limiting Configuration - P1 FIX
+rate-limiting:
+  enabled: ${RATE_LIMITING_ENABLED:true}
+  login-endpoint:
+    requests-per-minute: 5
+    per-ip: true
+  me-endpoint:
+    requests-per-minute: 60
+    per-user: true
+  jwks-endpoint:
+    requests-per-minute: 100
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    redis:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:local}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.haiintel.authservice: DEBUG
+    org.springframework.security: DEBUG
+    io.github.resilience4j: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [requestId=%X{requestId}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [requestId=%X{requestId}] - %msg%n"
+
