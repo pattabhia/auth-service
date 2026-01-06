@@ -1,4 +1,4 @@
-# HAI-Indexer Authentication Service
+# Authentication Service
 
 > **Important:** This project requires **Java 21** (not Java 24) for successful compilation due to Lombok compatibility.
 
